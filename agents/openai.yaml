@@ -1,0 +1,7 @@
+interface:
+  display_name: "iPhone Duo"
+  short_description: "iPhone Duo side bars, fold, hinge, and camera APIs"
+  default_prompt: "Use $iphone-duo to implement or review iPhone Duo side bars, fold-aware layouts, hinge interactions, or camera behavior."
+
+policy:
+  allow_implicit_invocation: true

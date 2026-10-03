@@ -1,0 +1,156 @@
+{
+  "skill_name": "iphone-duo",
+  "design_note": "Targeted writing/review prompts for iPhone Duo SDK decisions. Use a few relevant cases after changing guidance; compare observable API choices, preconditions and unchanged behavior, and compile generated Swift with the selected SDK. No full benchmark run is required. For a with/without-skill spot check, disable docs/web only in that check and report the limitation.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "buy-button-out-of-fold",
+      "prompt": "Our SwiftUI product page has a centered \"Buy Now\" button. On the new foldable iPhone Duo, when someone props the phone half-open like a book, the button lands right in the crease. How do I detect the fold and move the button? We can require iOS 27.1 for this screen.",
+      "expected_output": "Uses the iOS 27.1 reserved-region API on GeometryProxy with the .division kind, places the button in a region beside the fold, and does not use hinge-angle math or hardcoded positions",
+      "files": [],
+      "expectations": [
+        "Uses `reservedRegions(kind: .division)` on a `GeometryProxy` (from `GeometryReader` or `onGeometryChange`), and names `ReservedRegion` or its `frame` / `isActive`",
+        "States that the default query returns the fold only while the device is partially folded (or uses `isActive`), and that `.includeInactive` returns it otherwise",
+        "Places the button in the region on one side of the fold, or below it when the fold is horizontal, instead of hardcoding a coordinate or device check",
+        "Does not base the layout on the hinge angle (`onHingeChange` / `UIHingeInteraction`); if it mentions the hinge API, it says that API is for interactions and effects, not layout",
+        "Gives iOS 27.1 as the availability requirement",
+        "Keeps region query and placement in the same coordinate convention for RTL, observes regions rather than only size, and leaves the whole control clear of the fold."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "custom-toolbar-view-wont-go-vertical",
+      "prompt": "After rebuilding with Xcode 27.1, most of our toolbar buttons moved into the new side bar on iPhone Duo, but our custom compass view (a ToolbarItem containing an Image) stays up in the top bar, and so does our \"Edit\" text button. How do I get the compass into the side bar? Should Edit move too?",
+      "expected_output": "Explains custom views default to horizontal and opt in with .axisBehavior(.verticalPreferred); text-only items stay horizontal by design",
+      "files": [],
+      "expectations": [
+        "Applies `.axisBehavior(.verticalPreferred)` to the compass `ToolbarItem` (SwiftUI `ToolbarContent`), or `UIBarButtonItem.axisBehavior = .verticalPreferred` in UIKit",
+        "Explains that custom views stay horizontal by default and text-only items stay in the horizontal bar, so Edit staying there is expected",
+        "Mentions that the custom view must fit the bar's fixed width or adapt when vertical",
+        "Does not invent a different API name (for example `toolbarItemAxis` or `verticalBarPlacement`)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "calculator-keeps-horizontal-bars",
+      "prompt": "Our calculator app has a fixed, bottom-heavy layout. On iPhone Duo the toolbar moved into a side bar and squeezes the keypad. We want normal top and bottom bars on that one screen. Show me how in SwiftUI and in UIKit.",
+      "expected_output": "SwiftUI .toolbarVerticalBehavior(.disabled); UIKit override preferredVerticalBarBehavior returning .disabled, with setNeedsUpdateOfVerticalBarConfiguration and childForPreferredVerticalBarBehavior where relevant",
+      "files": [],
+      "expectations": [
+        "SwiftUI: uses `.toolbarVerticalBehavior(.disabled)`",
+        "UIKit: overrides `preferredVerticalBarBehavior` to return `.disabled` (type `UIVerticalBarBehavior`)",
+        "Mentions `setNeedsUpdateOfVerticalBarConfiguration()` for changes, or `childForPreferredVerticalBarBehavior` for custom containers",
+        "States the iOS 27.1 requirement",
+        "Notes that the choice should be stable per screen and not toggled with view state, or that the status bar also returns to the horizontal axis"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "custom-uitoolbar-stays-horizontal",
+      "prompt": "Our UIKit app draws its own UIToolbar at the bottom of the screen as a subview. Rebuilt with the iOS 27.1 SDK, every Apple app on iPhone Duo shows controls in a side bar, but ours stays at the bottom. Is there a property on UIToolbar to make it vertical?",
+      "expected_output": "No: plain UIToolbar/UINavigationBar/UITabBar subviews never go vertical; move items to UINavigationController/UITabBarController, or place custom chrome with the bar layout region",
+      "files": [],
+      "expectations": [
+        "States that a `UIToolbar` (or `UINavigationBar` / `UITabBar`) added as a subview does not move to the vertical bar, and that no property on it changes that",
+        "Recommends moving the items to view controllers inside `UINavigationController` (`toolbarItems` / `navigationItem`) or `UITabBarController`",
+        "For custom chrome that must stay custom, mentions `view.layoutGuide(for: .bar(onEdge:extent:))` (iOS 27.1), or reading `traitCollection.verticalBarEdge` to pick the edge",
+        "Does not invent a UIToolbar API such as `isVertical` or `axis`",
+        "When providing a navigation-controller bottom-toolbar implementation, shows it with setToolbarHidden(false, animated:) as well as setting toolbarItems."
+      ]
+    },
+    {
+      "id": 5,
+      "name": "camera-direction-on-open-close",
+      "prompt": "Our video-call app uses the front camera through AVFoundation. On iPhone Duo, what happens to the front camera when someone opens or closes the phone, and how do we use the best camera on each display? We currently pick devices by `position == .front`.",
+      "expected_output": "Explains the virtual front camera returned by existing discovery, the physical inner/outer ultra wide device types, and AVCaptureDeviceDirectionCoordinator with descriptors handed to the capture actor",
+      "files": [],
+      "expectations": [
+        "Says existing front-camera discovery (`.builtInWideAngleCamera` / `.builtInUltraWideCamera` at `.front`) returns a virtual front camera that switches between the inner and outer cameras automatically, limited to their shared capabilities",
+        "Names `.builtInOuterUltraWideCamera` and `.builtInInnerUltraWideCamera` (iOS 27.1) for full per-camera capabilities",
+        "Uses `AVCaptureDeviceDirectionCoordinator` (AVKit) created with a view and device types, and reads `forwardFacingDeviceDescriptors` from the map",
+        "Says not to call AVFoundation in the change handler, and to pass the Sendable `AVCaptureDeviceDescriptor` (by `uniqueID`) to the actor or queue that owns the session",
+        "Explains that `position` no longer tells which way a camera faces, so mirroring must follow direction; deviceTypes includes the actual capture types, including ordinary front-camera types for shared support",
+        "Applies mirroring on the capture owner on every known direction update, including return transitions, and does not mark a camera applied before switching succeeds."
+      ]
+    },
+    {
+      "id": 6,
+      "name": "teleprompter-on-outer-display",
+      "prompt": "We make a recording app. On iPhone Duo we'd like to show a teleprompter on the outer display while the person records with the phone open. And separately, our note-taking app would like to show a clock on the outer display while the phone is open. How do we do each?",
+      "expected_output": "Camera app: CameraCaptureAccessory via sceneAccessory (or UISceneAccessory.cameraCapture) with an active capture session; notes app: not possible",
+      "files": [],
+      "expectations": [
+        "For the recording app, uses SwiftUI `CameraCaptureAccessory` inside `.sceneAccessory { }`, or UIKit `UISceneAccessory.cameraCapture(sceneConfiguration:)` with `registerSceneAccessory`, gated to iOS 27.1",
+        "States that the accessory needs an active camera capture session and the app full screen on the inner display (and is unavailable in split view)",
+        "Observes availability (`onAvailabilityChange` or `UISceneAccessoryRegistration.isAvailable`) to update the UI",
+        "States that a non-camera app cannot show content on both displays at once",
+        "Does not treat accessory availability or successful presentation without a camera in the simulator as proof that a non-camera app qualifies on hardware."
+      ]
+    },
+    {
+      "id": 7,
+      "name": "hinge-whammy-bar",
+      "prompt": "For our guitar app, we want the iPhone Duo's fold angle to act as a whammy bar. How do we read the hinge in SwiftUI and in UIKit, what units are the angles in, and what happens on a regular iPhone?",
+      "expected_output": "SwiftUI onHingeChange with DeviceHingeContext/DeviceHinge (Angle); UIKit UIHingeInteraction with UIHinge (radians); no hinge on other iPhones",
+      "files": [],
+      "expectations": [
+        "SwiftUI: uses `onHingeChange` and reads `context.hinge` (`DeviceHinge`) with `status` and `angle` (an `Angle`)",
+        "UIKit: adds a `UIHingeInteraction` and reads `update.hinge` (`UIHinge`), whose `angle` is in radians",
+        "Mentions the statuses closed, partiallyOpen and fullyOpen, and suggests using the bend only while partially open",
+        "Initializes a no-bend state and handles an absent hinge without requiring an initial callback on a nonfoldable device",
+        "States iOS 27.1 availability"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "player-and-up-next-arrangement",
+      "prompt": "Our podcast player shows the player and, optionally, an Up Next list. On iPad we use an HStack. On iPhone Duo we want them to split at the fold when the phone is half-open and to show just the player when the window is tall and narrow. Is there a container for this?",
+      "expected_output": "ArrangementView with the split style restricted to the horizontal axis (UIKit UIArrangementViewController with UISplitArrangement)",
+      "files": [],
+      "expectations": [
+        "Uses `ArrangementView { primary } secondary: { secondary }` (iOS 27.1) or `UIArrangementViewController` in UIKit",
+        "Chooses the split style and restricts it with `.arrangementViewStyle(.split.axes(.horizontal))` (or `UISplitArrangement().axes(.horizontal)`), explaining that only the primary shows when the view is taller than wide",
+        "Explains that the split aligns with the fold when the device is partially folded",
+        "Contrasts with the overlay style (layered, side by side when folded) and picks split for a main-detail pair",
+        "Keeps navigation outside the arrangement and List/ScrollView content inside individual panes"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "which-xcode-for-duo",
+      "prompt": "Our team already moved to the Xcode 27.2 beta to test iOS 27.2. We need to ship iPhone Duo support for the launch. Can we build and test the Duo features with Xcode 27.2 beta 2?",
+      "expected_output": "Use Xcode 27.1 (iOS 27.1 SDK) for Duo: Apple's 27.2 beta 2 notes say so, its SDK lacks AVCaptureDeviceDirectionCoordinator and ContentMarginGuide, and its simulator can't run iPhone Duo",
+      "files": [],
+      "expectations": [
+        "Recommends Xcode 27.1 with the iOS 27.1 SDK for iPhone Duo work",
+        "Says the Xcode 27.2 beta 2 iOS SDK is missing some Duo APIs, naming at least one of `AVCaptureDeviceDirectionCoordinator` or `ContentMarginGuide`",
+        "Says the iPhone Duo simulator needs the iOS 27.1 runtime (27.2 beta 2's runtime can't run it)",
+        "Mentions that iPhone Duo ships running iOS 27.1"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "routing-generic-readiness",
+      "prompt": "Get our UIKit app ready for iPhone Duo. It uses `UIScreen.main.bounds` in several view controllers, checks `UIDevice.current.userInterfaceIdiom` to choose between iPhone and iPad layouts, and has a custom bottom UIToolbar. What should we change?",
+      "expected_output": "Hands the resizing modernization (UIScreen.main, idiom, safe areas) to app-resizability's approach, and adds the Duo-specific bar guidance: move the custom toolbar into container-managed toolbarItems so it can go vertical",
+      "files": [],
+      "expectations": [
+        "Treats `UIScreen.main` and idiom checks as general resizability work (replace with view/trait-based values and size classes), pointing to the app-resizability skill or following its approach rather than inventing Duo-specific replacements",
+        "States that the inner display reports regular width and regular height while the idiom stays phone, so size classes, not idiom, should pick the layout",
+        "Says the custom `UIToolbar` subview won't move into the vertical side bar and recommends `toolbarItems` in a `UINavigationController` (or the bar layout region for custom chrome)",
+        "Mentions rebuilding with the iOS 27.1 SDK to get full-screen and vertical-bar behavior"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "leave-working-symbol-toolbar-alone",
+      "prompt": "Our SwiftUI screen already uses NavigationStack with List and titled symbol buttons in .toolbar. It resizes correctly. After rebuilding with Xcode 27.1 the buttons appear in the side bar on Duo. Review whether Duo support requires replacing this with custom chrome.",
+      "expected_output": "Keeps the working system toolbar and checks only relevant pose, overflow and accessibility behavior.",
+      "files": [],
+      "expectations": [
+        "Does not replace the NavigationStack/List toolbar or add axisBehavior/opt-out without a demonstrated need.",
+        "Explains that container-managed symbol toolbar items already adapt with the 27.1 SDK."
+      ]
+    }
+  ]
+}
