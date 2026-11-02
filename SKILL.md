@@ -9,11 +9,10 @@ Use this skill for the behavior being changed. A broad “get my app ready for D
 
 ## Build, deployment and runtime
 
-- **Baseline:** Xcode 27.1 beta (27A9269), iOS 27.1 SDK, Swift 6.4. Select it explicitly when multiple Xcodes are installed. Building with this SDK enables the full-display and vertical-bar behavior; raising the deployment target alone does not.
+- **Baseline:** Xcode 27.1 or later, iOS 27.1 SDK or later, Swift 6.4. Select it explicitly when multiple Xcodes are installed. Building with this SDK enables the full-display and vertical-bar behavior; raising the deployment target alone does not.
 - **Deployment:** guard the Duo APIs with `if #available(iOS 27.1, *)` or annotate their declarations. These related APIs are iOS 27.0: `presentationPlacement`, `defaultTabBarPlacement`, sidebar `preferredPlacement`, `topBarPinnedTrailing`. Availability cannot supply a symbol missing from the build SDK.
-- **Xcode 27.2 beta 2 (27B5028f):** the SDK lacks `AVCaptureDeviceDirectionCoordinator` and `ContentMarginGuide`. Its simulator runtime does not run Duo. Use 27.1 for Duo work; run the compile probes with 27.2 to identify skips. Recheck later releases rather than generalizing this beta limitation.
-- **Mac Catalyst:** isolate affected 27.1 APIs with `#if !targetEnvironment(macCatalyst)` in these betas. [Apple release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27_1-release-notes).
-- **Runtime:** iPhone Duo ships with iOS 27.1. The iOS 27.1 Duo simulator is specific to Duo. A nonfoldable iOS 27.2 simulator is a separate comparison, not proof of Duo runtime behavior.
+- **Mac Catalyst:** isolate affected 27.1 APIs with `#if !targetEnvironment(macCatalyst)`; the Xcode 27.1 and 27.2 release notes still list the Catalyst compile errors as a known issue (185924957). [Apple release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27_2-release-notes).
+- **Runtime:** iPhone Duo ships with iOS 27.1 and runs only on Duo-only simulator runtimes; the general iOS runtimes run the other iPhones. A nonfoldable simulator is a separate comparison, not proof of Duo runtime behavior.
 
 Closed Duo has compact width; open Duo has regular width and height while its idiom remains `.phone`. General resizing belongs to app-resizability. The linked-SDK and `UIRequiresFullScreen`/orientation matrix is in [displays-and-camera.md](references/displays-and-camera.md#apps-by-linked-sdk).
 
@@ -49,10 +48,10 @@ Read [displays-and-camera.md](references/displays-and-camera.md#scenes-and-multi
 - Existing front-camera discovery uses a virtual camera that follows the app between displays. Choose physical inner/outer camera types only when their full capabilities are needed. `AVCaptureDeviceDirectionCoordinator` (AVKit) reports direction relative to a preview view; position alone cannot choose the camera or mirroring.
 - The coordinator belongs on the main actor. Pass its Sendable descriptors/maps to the serialized capture owner, resolve devices there, and apply mirroring there on direction changes and new connections. **swift-concurrency** owns the capture actor design.
 
-`ContentMarginGuide.container` is provisional in the 27.1 SDK and missing in 27.2 beta 2. Do not make it a prerequisite for correct Duo layout; see the [narrow SDK note](references/bars-and-fold.md#content-margins-next-to-the-side-bar).
+`ContentMarginGuide.container` (iOS 27.1) gives asymmetric content margins next to the side bar; see [content margins](references/bars-and-fold.md#content-margins-next-to-the-side-bar).
 
 ## Verification
 
-Run `XCODE=/Applications/Xcode-27.1.0-Beta.app tests/run.sh` for the examples and availability gates. Run it against 27.2 beta 2 as well; absent optional APIs produce explicit skips. Compiler success does not validate bar placement or camera behavior.
+Run `XCODE=/path/to/Xcode.app tests/run.sh` with the Xcode you build with, for the examples and availability gates. Compiler success does not validate bar placement or camera behavior.
 
 Use **mobilecli** for pose tests and the [simulator recipe and limits](references/displays-and-camera.md#testing-on-the-simulator). Capture both displays, test closed/open/partially folded, RTL and relevant accessibility settings. Keep SDK, deployment target, runtime build, Info.plist choices and pose sequence with observations. Simulator-only anomalies in the references are observations, not platform contracts. When Apple docs, SDK declarations and runtime observations conflict, resolve each claim on its own evidence.

@@ -23,7 +23,7 @@ iPhone Duo and its APIs shipped with iOS 27.1 in October 2026, after most models
 - The hinge has its own APIs, meant for interactions rather than layout.
 - Only camera apps can show UI on both displays, through a camera capture scene accessory.
 - A virtual front camera follows the active display, and a new coordinator reports which way each camera faces.
-- Several names in Apple's talks differ from the SDK, and Xcode 27.2 beta 2's SDK lacks two of the APIs.
+- Several names in Apple's talks differ from the SDK.
 
 ## Installation
 
@@ -55,22 +55,19 @@ tests/                              compile probes (run.sh, probes.py)
 `tests/run.sh` checks the Swift examples and API availability against an installed Xcode with the iOS 27.1 SDK or later. Runtime observations require separate simulator or device checks. It uses `$XCODE` (an `.app` path), then `$DEVELOPER_DIR`, then the `xcode-select` default.
 
 ```bash
-XCODE=/Applications/Xcode-27.1.0-Beta.app tests/run.sh
+XCODE=/path/to/Xcode-27.1.app tests/run.sh
 ```
 
 It checks:
 
-- **sdk:** the selected iOS SDK declares the iPhone Duo APIs, and it reports whether it declares the two that the Xcode 27.2 beta 2 SDK lacks (`AVCaptureDeviceDirectionCoordinator`, `ContentMarginGuide`).
-- **snippets:** every Swift block in `SKILL.md` and `references/` compiles with no warnings (`swiftc -emit-sil`, Swift 6 mode, iOS SDK). A new block without a probe fails the run. Blocks that need an API the SDK lacks are skipped.
+- **sdk:** the selected iOS SDK declares the iPhone Duo APIs.
+- **snippets:** every Swift block in `SKILL.md` and `references/` compiles with no warnings (`swiftc -emit-sil`, Swift 6 mode, iOS SDK). A new block without a probe fails the run.
 - **gates:** each API fails one release below the version the skill states and compiles at that version.
 - **names:** names used in Apple's talks that differ from the SDK keep failing. The `UIWindowScene.ActivationAction` trailing-closure pitfall still behaves as described.
 
-Last run, 2026-10-03:
+Last run, 2026-11-02: Xcode 27.2 (27B52), iOS 27.2 SDK, Swift 6.4.2 (swiftlang-6.4.2.1.9): 69 passed.
 
-- **Xcode 27.1 beta (27A9269), iOS 27.1 SDK, Swift 6.4 (swiftlang-6.4.0.34.1):** 67 passed.
-- **Xcode 27.2 beta 2 (27B5028f), iOS 27.2 SDK:** 62 passed, 5 skipped because that SDK lacks the two APIs.
-
-Runtime guidance was rechecked on iOS 27.1 simulator build 24A94401 with mobilecli 1.0.17, using isolated simulators and fresh builds, with an iPhone 17 Pro on iOS 27.2 as the nonfoldable comparison. Linked-SDK probes used SDKs 26.5, 27.0 and 27.1 on that same runtime. The audit covered system and custom toolbars, compression, RTL fold avoidance with same-size updates, arrangements, system presentations, hinge paths, orientation/full-screen policies, new scenes and camera accessory availability/presentation.
+Runtime guidance was rechecked on iOS 27.1 simulator build 24A94401 with mobilecli 1.0.17, using isolated simulators and fresh builds, with an iPhone 17 Pro on iOS 27.2 as the nonfoldable comparison. Linked-SDK probes used SDKs 26.5, 27.0 and 27.1 on that same runtime. The audit covered system and custom toolbars, compression, RTL fold avoidance with same-size updates, arrangements, system presentations, hinge paths, orientation/full-screen policies, new scenes and camera accessory availability/presentation. On 2026-10-25 an iPhone Duo simulator also booted on the Duo-only iOS 27.2 runtime (24B91014); the guidance was not re-audited there.
 
 The recheck corrected earlier simulator conclusions: compression preferences worked; the division frame included its margins; camera accessories actually presented without capture. Other observations remain qualified in the references. The simulator did not establish real capture behavior, open-portrait/laptop layout or hardware-only conditions. The runnable fixtures, paired-display captures, logs and initial failures were preserved separately with the review; they are not a new test framework in this skill.
 
@@ -106,8 +103,8 @@ Use the few prompts relevant to a change. For a qualitative with/without-skill s
   - [preferredVerticalBarBehavior](https://developer.apple.com/documentation/uikit/uiviewcontroller/preferredverticalbarbehavior)
   - [CameraCaptureAccessory](https://developer.apple.com/documentation/swiftui/cameracaptureaccessory)
   - [Presenting content on a connected display](https://developer.apple.com/documentation/uikit/presenting-content-on-a-connected-display)
-- [Xcode 27.1 beta release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27_1-release-notes) and [Xcode 27.2 beta 2 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27_2-release-notes)
-- iOS 27.0, 27.1 and 27.2 beta 2 SDK headers and Swift interfaces, compared
+- [Xcode 27.1 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27_1-release-notes) and [Xcode 27.2 release notes](https://developer.apple.com/documentation/xcode-release-notes/xcode-27_2-release-notes)
+- iOS 27.0, 27.1 and 27.2 SDK headers and Swift interfaces, compared
 
 ## Contributing
 

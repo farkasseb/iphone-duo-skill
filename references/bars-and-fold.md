@@ -1,6 +1,6 @@
 # Bars and the fold
 
-Code here targets an iOS 27.1 deployment target unless a block says otherwise. "Measured" means observed in the iOS 27.1 iPhone Duo simulator (Xcode 27.1 beta).
+Code here targets an iOS 27.1 deployment target unless a block says otherwise. "Measured" means observed in the iOS 27.1 iPhone Duo simulator.
 
 ## Vertical bars
 
@@ -263,7 +263,7 @@ In UIKit, set `tabBarController.sidebar.preferredPlacement = .sidebar` (iOS 27.0
 
 `ContentMarginGuide.container` (iOS 27.1 SDK, `anyAppleOS 27.1`) gives asymmetric content margins, so content can sit closer to the side bar while the opposite margin stays.
 
-Do not hardcode the resulting margins or require this provisional API for correct fold or bar handling.
+Do not hardcode the resulting margins.
 
 ```swift
 import SwiftUI
@@ -280,11 +280,6 @@ struct ArticleBody: View {
     }
 }
 ```
-
-Provisional:
-
-- **SDK:** the Xcode 27.2 beta 2 SDK and its `.tbd` drop it, so this code doesn't compile with that Xcode.
-- **Use:** prefer established layout margins or `safeAreaPadding` when supporting both toolchains. Runtime availability checks cannot make this symbol compile against a SDK that does not declare it.
 
 ## Reserved regions
 
@@ -385,7 +380,7 @@ Fresh iOS 27.1 simulator checks:
 Design notes:
 
 - **Displace only what needs it.** Move controls together when they belong together, don't move them far from their source, and leave continuous scrolling content alone.
-- **Choose the side by purpose.** In book pose Apple describes alerts moving toward where they will appear when the device closes. The talk says trailing; the fresh simulator alert appeared on the leading half. Let system presentations choose their placement instead of correcting that beta observation with manual positioning. In laptop pose, glanceable content goes in the upper region and controls in the lower.
+- **Choose the side by purpose.** In book pose Apple describes alerts moving toward where they will appear when the device closes. The talk says trailing; the fresh simulator alert appeared on the leading half. Let system presentations choose their placement instead of correcting that simulator observation with manual positioning. In laptop pose, glanceable content goes in the upper region and controls in the lower.
 - **Keep every control reachable in every pose.** Don't tie functionality to a pose.
 - **Grids.** Apple suggests inactive regions for high-level decisions: in grid-like layouts, you could prefer an even number of columns when a division region is present, active or not (`.includeInactive`).
 
@@ -404,11 +399,11 @@ iOS 27.1 simulator observations (available poses only):
 - **Flat open:** a horizontal split, at the middle of the view.
 - **Partially folded:** the boundary sits on the fold's division (primary ends at x 455.5, secondary starts at 495.5).
 - **Closed portrait:** stacked for an unrestricted split; horizontal-only split displays just the primary.
-- **Closed landscape:** SwiftUI drew both split children in the same frame while UIKit rendered only the primary. Its secondary `state.isHidden` nevertheless stayed `false` in the direct container query; visual collapse and reported state did not agree. This reproduced in the beta runtime; verify the constrained layout rather than relying on the environment value alone.
+- **Closed landscape:** SwiftUI drew both split children in the same frame while UIKit rendered only the primary. Its secondary `state.isHidden` nevertheless stayed `false` in the direct container query; visual collapse and reported state did not agree. This reproduced in the iOS 27.1 simulator runtime; verify the constrained layout rather than relying on the environment value alone.
 - **`.overlay`:**
   - It stayed layered until partially folded, then went side by side with the secondary on the leading side.
   - `.overlayArrangementEdge(_:)` (`HorizontalEdge?` or `VerticalEdge?`) selects the view's edge when the overlay transitions to a separated layout along the corresponding axis. The fresh run did not exercise it; the observation above is the default.
-- **State values:** Fresh checks reproduced SwiftUI child `overlayArrangementZIndex == 0` and `splitArrangementAxis == nil` despite changed layout. Read these inside the arranged child, as the API requires; do not turn this beta observation into a workaround based on hinge angles. UIKit provides `state(for:)`. Hardware behavior is unverified.
+- **State values:** Fresh checks reproduced SwiftUI child `overlayArrangementZIndex == 0` and `splitArrangementAxis == nil` despite changed layout. Read these inside the arranged child, as the API requires; do not turn this simulator observation into a workaround based on hinge angles. UIKit provides `state(for:)`. Hardware behavior is unverified.
 
 ```swift
 import SwiftUI

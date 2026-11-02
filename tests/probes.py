@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Compile probes for the iphone-duo skill.
 
-Run through tests/run.sh, which selects the Xcode. Every check prints PASS, FAIL
-or SKIP; the exit status is non-zero if any check fails.
+Run through tests/run.sh, which selects the Xcode. Every check prints PASS or
+FAIL; the exit status is non-zero if any check fails.
 
 Sections:
-  sdk       the selected iOS SDK is 27.1 or later and declares the iPhone Duo APIs;
-            reports the two APIs the Xcode 27.2 beta 2 SDK lacks
+  sdk       the selected iOS SDK is 27.1 or later and declares the iPhone Duo APIs
   snippets  every ```swift block in SKILL.md and references/ compiles with no
             diagnostics (swiftc -emit-sil, iOS SDK, Swift 6 mode); a block without
-            a probe fails; blocks that need an API the SDK lacks are skipped
+            a probe fails
   gates     availability: each API fails one release below the version the skill states
   names     names from Apple's talks that differ from the SDK keep failing, and the
             ActivationAction initializer pitfall still binds the way the skill says
@@ -30,7 +29,6 @@ DEV = os.environ.get("DEVELOPER_DIR", "")
 RESULTS = []
 WORK = Path(tempfile.mkdtemp(prefix="iphone-duo-probes-"))
 SDK = ""
-OPTIONAL = {}  # symbol -> declared in the selected SDK
 
 
 def report(section, name, ok, detail=""):
@@ -38,10 +36,6 @@ def report(section, name, ok, detail=""):
     print(f"{'PASS' if ok else 'FAIL'}  [{section}] {name}")
     if not ok and detail:
         print(textwrap.indent(detail.strip()[:1500], "      "))
-
-
-def skip(section, name, why):
-    print(f"SKIP  [{section}] {name} ({why})")
 
 
 def run(cmd, timeout=300):
@@ -121,15 +115,11 @@ def check_sdk():
         ("SwiftUI toolbarVerticalBehavior", interface("SwiftUI"), "func toolbarVerticalBehavior("),
         ("SwiftUI CameraCaptureAccessory", interface("SwiftUI"), "struct CameraCaptureAccessory<"),
         ("AVFoundation builtInInnerUltraWideCamera", header("AVFoundation", "AVCaptureDevice.h"), "AVCaptureDeviceTypeBuiltInInnerUltraWideCamera"),
+        ("AVKit AVCaptureDeviceDirectionCoordinator", header("AVKit", "AVCaptureDeviceDirectionCoordinator.h"), "@interface AVCaptureDeviceDirectionCoordinator"),
+        ("SwiftUI ContentMarginGuide", interface("SwiftUICore"), "struct ContentMarginGuide"),
     ]
     for name, path, needle in core:
         report(s, f"SDK declares {name}", declares(path, needle), f"{needle!r} not found in {path}")
-    # Declared in the iOS 27.1 SDK, missing from the Xcode 27.2 beta 2 SDK. Reported, not failed.
-    OPTIONAL["AVCaptureDeviceDirectionCoordinator"] = declares(
-        header("AVKit", "AVCaptureDeviceDirectionCoordinator.h"), "@interface AVCaptureDeviceDirectionCoordinator")
-    OPTIONAL["ContentMarginGuide"] = declares(interface("SwiftUICore"), "struct ContentMarginGuide")
-    for symbol, present in OPTIONAL.items():
-        print(f"INFO  [sdk] {symbol}: {'declared' if present else 'NOT declared in this SDK'}")
 
 
 # ---------------------------------------------------------------- snippets
@@ -145,45 +135,42 @@ def swift_blocks():
 
 B = "references/bars-and-fold.md"
 D = "references/displays-and-camera.md"
-# (file, marker unique to the block, prelude, deployment target, SDK symbol the block needs or None)
+# (file, marker unique to the block, prelude, deployment target)
 SNIPPETS = [
-    (B, "struct InboxView", "", "27.1", None),
-    (B, "final class MailboxViewController", "", "27.1", None),
-    (B, "final class CalculatorViewController", "", "27.1", None),
-    (B, "func keepsHorizontalBars", "", "18.0", None),
-    (B, "final class PlayerControlsViewController", "", "27.1", None),
-    (B, "struct FiltersButton", "", "27.1", None),
-    (B, "struct LibraryTabs", "", "27.1", None),
-    (B, "struct ArticleBody", "", "27.1", "ContentMarginGuide"),
-    (B, "struct CheckoutView", "", "27.1", None),
-    (B, "final class CheckoutContainerView", "", "27.1", None),
-    (B, "struct NowPlayingScreen", "", "27.1", None),
-    (B, "final class UpNextViewController", "", "27.1", None),
-    (B, "struct WhammyGuitarView", "", "27.1", None),
-    (B, "final class InstrumentViewController", "", "27.1", None),
-    (D, "func makeNewWindowButton", "", "27.1", None),
-    (D, "struct RehearsalCameraView", "", "27.1", None),
-    (D, "final class CaptureViewController", "", "27.1", None),
-    (D, "func frontCamera", "", "27.1", None),
-    (D, "final class CameraDirectionObserver", "", "27.1", "AVCaptureDeviceDirectionCoordinator"),
-    (D, "func applyMirroring", "", "27.1", "AVCaptureDeviceDirectionCoordinator"),
-    (D, "func turnOffSensorCompensation", "", "27.1", None),
+    (B, "struct InboxView", "", "27.1"),
+    (B, "final class MailboxViewController", "", "27.1"),
+    (B, "final class CalculatorViewController", "", "27.1"),
+    (B, "func keepsHorizontalBars", "", "18.0"),
+    (B, "final class PlayerControlsViewController", "", "27.1"),
+    (B, "struct FiltersButton", "", "27.1"),
+    (B, "struct LibraryTabs", "", "27.1"),
+    (B, "struct ArticleBody", "", "27.1"),
+    (B, "struct CheckoutView", "", "27.1"),
+    (B, "final class CheckoutContainerView", "", "27.1"),
+    (B, "struct NowPlayingScreen", "", "27.1"),
+    (B, "final class UpNextViewController", "", "27.1"),
+    (B, "struct WhammyGuitarView", "", "27.1"),
+    (B, "final class InstrumentViewController", "", "27.1"),
+    (D, "func makeNewWindowButton", "", "27.1"),
+    (D, "struct RehearsalCameraView", "", "27.1"),
+    (D, "final class CaptureViewController", "", "27.1"),
+    (D, "func frontCamera", "", "27.1"),
+    (D, "final class CameraDirectionObserver", "", "27.1"),
+    (D, "func applyMirroring", "", "27.1"),
+    (D, "func turnOffSensorCompensation", "", "27.1"),
 ]
 
 
 def check_snippets():
     blocks = swift_blocks()
     used = set()
-    for f, marker, prelude, target, needs in SNIPPETS:
+    for f, marker, prelude, target in SNIPPETS:
         matches = [i for i, (bf, code) in enumerate(blocks) if bf == f and marker in code]
         name = f"{f} «{marker}»" + (f" at iOS {target}" if target != "27.1" else "")
         if len(matches) != 1:
             report("snippets", name, False, f"expected exactly one block containing the marker, found {len(matches)}")
             continue
         used.add(matches[0])
-        if needs and not OPTIONAL.get(needs, True):
-            skip("snippets", name, f"this SDK does not declare {needs}")
-            continue
         expect_clean("snippets", name, prelude + blocks[matches[0]][1], target=target)
     for i, (f, code) in enumerate(blocks):
         if i not in used:
@@ -194,34 +181,34 @@ def check_snippets():
 # ---------------------------------------------------------------- gates
 
 GATED = [
-    # (name, source, version the skill states, SDK symbol needed or None)
-    ("UIWindowScene.ActivationAction", 'import UIKit\n@MainActor func f() { _ = UIWindowScene.ActivationAction(title: "New", alternate: nil) { _ in nil } }', "15.0", None),
-    ("onHingeChange", "import SwiftUI\nfunc f(v: some View) -> some View { v.onHingeChange { _, _ in } }", "27.1", None),
-    ("DeviceHinge", "import SwiftUI\nfunc f(h: DeviceHinge) -> Double { h.angle.degrees }", "27.1", None),
-    ("UIHingeInteraction", "import UIKit\n@MainActor func f() { _ = UIHingeInteraction { _, _ in } }", "27.1", None),
-    ("GeometryProxy.reservedRegions", "import SwiftUI\nfunc f(p: GeometryProxy) -> Int { p.reservedRegions(kind: .division).count }", "27.1", None),
-    ("UIView.reservedRegions", "import UIKit\n@MainActor func f(v: UIView) -> Int { v.reservedRegions(kind: .division, options: .includeInactive).count }", "27.1", None),
-    ("ArrangementView", "import SwiftUI\nstruct V: View { var body: some View { ArrangementView { Text(\"a\") } secondary: { Text(\"b\") } } }", "27.1", None),
-    ("UIArrangementViewController", "import UIKit\n@MainActor func f() { _ = UIArrangementViewController() }", "27.1", None),
-    ("toolbarVerticalBehavior", "import SwiftUI\nfunc f(v: some View) -> some View { v.toolbarVerticalBehavior(.disabled) }", "27.1", None),
-    ("toolbarVerticalCompressionBehavior", "import SwiftUI\nfunc f(v: some View) -> some View { v.toolbarVerticalCompressionBehavior(.prefersToolbarItems) }", "27.1", None),
-    ("toolbarVerticalEdge", "import SwiftUI\nfunc f(e: EnvironmentValues) -> HorizontalEdge? { e.toolbarVerticalEdge }", "27.1", None),
-    ("ToolbarContent.axisBehavior", "import SwiftUI\nfunc f(c: some ToolbarContent) -> some ToolbarContent { c.axisBehavior(.verticalPreferred) }", "27.1", None),
-    ("UIBarButtonItem.axisBehavior", "import UIKit\n@MainActor func f(i: UIBarButtonItem) { i.axisBehavior = .horizontalOnly }", "27.1", None),
-    ("preferredVerticalBarBehavior", "import UIKit\nfinal class C: UIViewController { override var preferredVerticalBarBehavior: UIVerticalBarBehavior { .disabled } }", "27.1", None),
-    ("verticalBarCompressionBehavior", "import UIKit\n@MainActor func f(n: UINavigationItem) { n.verticalBarCompressionBehavior = .prefersBarItems }", "27.1", None),
-    ("UIView.LayoutRegion.bar", "import UIKit\n@MainActor func f(v: UIView) { _ = v.layoutGuide(for: .bar(onEdge: NSDirectionalRectEdge.trailing, extent: 44)) }", "27.1", None),
-    ("CameraCaptureAccessory", "import SwiftUI\nfunc f() { _ = CameraCaptureAccessory { Text(\"t\") } }", "27.1", None),
-    ("UISceneAccessory.cameraCapture", "import UIKit\n@MainActor func f() { _ = UISceneAccessory.cameraCapture(sceneConfiguration: UISceneConfiguration()) }", "27.1", None),
-    ("builtInInnerUltraWideCamera", "import AVFoundation\nfunc f() -> AVCaptureDevice.DeviceType { .builtInInnerUltraWideCamera }", "27.1", None),
-    ("AVCaptureDeviceDirectionCoordinator", "import AVKit\nimport UIKit\n@MainActor func f(v: UIView) { _ = AVCaptureDeviceDirectionCoordinator(view: v, deviceTypes: []) }", "27.1", "AVCaptureDeviceDirectionCoordinator"),
-    ("ContentMarginGuide", "import SwiftUI\nfunc f(v: some View) -> some View { v.contentMargins(for: .container) }", "27.1", "ContentMarginGuide"),
-    ("presentationPlacement", "import SwiftUI\nfunc f(v: some View) -> some View { v.presentationPlacement(.trailing) }", "27.0", None),
-    ("defaultTabBarPlacement", "import SwiftUI\nfunc f(v: some View) -> some View { v.defaultTabBarPlacement(.sidebar) }", "27.0", None),
-    ("UITabBarControllerSidebar.preferredPlacement", "import UIKit\n@MainActor func f(t: UITabBarController) { t.sidebar.preferredPlacement = .sidebar }", "27.0", None),
-    ("UISheetPresentationController.preferredPlacement", "import UIKit\n@MainActor func f(s: UISheetPresentationController) { s.preferredPlacement = .trailing }", "27.0", None),
-    ("dynamicAspectRatio", "import AVFoundation\nfunc f(d: AVCaptureDevice) -> AVCaptureDevice.AspectRatio? { d.dynamicAspectRatio }", "26.0", None),
-    ("isCameraSensorOrientationCompensationEnabled", "import AVFoundation\nfunc f(o: AVCapturePhotoOutput) { o.isCameraSensorOrientationCompensationEnabled = false }", "26.0", None),
+    # (name, source, version the skill states)
+    ("UIWindowScene.ActivationAction", 'import UIKit\n@MainActor func f() { _ = UIWindowScene.ActivationAction(title: "New", alternate: nil) { _ in nil } }', "15.0"),
+    ("onHingeChange", "import SwiftUI\nfunc f(v: some View) -> some View { v.onHingeChange { _, _ in } }", "27.1"),
+    ("DeviceHinge", "import SwiftUI\nfunc f(h: DeviceHinge) -> Double { h.angle.degrees }", "27.1"),
+    ("UIHingeInteraction", "import UIKit\n@MainActor func f() { _ = UIHingeInteraction { _, _ in } }", "27.1"),
+    ("GeometryProxy.reservedRegions", "import SwiftUI\nfunc f(p: GeometryProxy) -> Int { p.reservedRegions(kind: .division).count }", "27.1"),
+    ("UIView.reservedRegions", "import UIKit\n@MainActor func f(v: UIView) -> Int { v.reservedRegions(kind: .division, options: .includeInactive).count }", "27.1"),
+    ("ArrangementView", "import SwiftUI\nstruct V: View { var body: some View { ArrangementView { Text(\"a\") } secondary: { Text(\"b\") } } }", "27.1"),
+    ("UIArrangementViewController", "import UIKit\n@MainActor func f() { _ = UIArrangementViewController() }", "27.1"),
+    ("toolbarVerticalBehavior", "import SwiftUI\nfunc f(v: some View) -> some View { v.toolbarVerticalBehavior(.disabled) }", "27.1"),
+    ("toolbarVerticalCompressionBehavior", "import SwiftUI\nfunc f(v: some View) -> some View { v.toolbarVerticalCompressionBehavior(.prefersToolbarItems) }", "27.1"),
+    ("toolbarVerticalEdge", "import SwiftUI\nfunc f(e: EnvironmentValues) -> HorizontalEdge? { e.toolbarVerticalEdge }", "27.1"),
+    ("ToolbarContent.axisBehavior", "import SwiftUI\nfunc f(c: some ToolbarContent) -> some ToolbarContent { c.axisBehavior(.verticalPreferred) }", "27.1"),
+    ("UIBarButtonItem.axisBehavior", "import UIKit\n@MainActor func f(i: UIBarButtonItem) { i.axisBehavior = .horizontalOnly }", "27.1"),
+    ("preferredVerticalBarBehavior", "import UIKit\nfinal class C: UIViewController { override var preferredVerticalBarBehavior: UIVerticalBarBehavior { .disabled } }", "27.1"),
+    ("verticalBarCompressionBehavior", "import UIKit\n@MainActor func f(n: UINavigationItem) { n.verticalBarCompressionBehavior = .prefersBarItems }", "27.1"),
+    ("UIView.LayoutRegion.bar", "import UIKit\n@MainActor func f(v: UIView) { _ = v.layoutGuide(for: .bar(onEdge: NSDirectionalRectEdge.trailing, extent: 44)) }", "27.1"),
+    ("CameraCaptureAccessory", "import SwiftUI\nfunc f() { _ = CameraCaptureAccessory { Text(\"t\") } }", "27.1"),
+    ("UISceneAccessory.cameraCapture", "import UIKit\n@MainActor func f() { _ = UISceneAccessory.cameraCapture(sceneConfiguration: UISceneConfiguration()) }", "27.1"),
+    ("builtInInnerUltraWideCamera", "import AVFoundation\nfunc f() -> AVCaptureDevice.DeviceType { .builtInInnerUltraWideCamera }", "27.1"),
+    ("AVCaptureDeviceDirectionCoordinator", "import AVKit\nimport UIKit\n@MainActor func f(v: UIView) { _ = AVCaptureDeviceDirectionCoordinator(view: v, deviceTypes: []) }", "27.1"),
+    ("ContentMarginGuide", "import SwiftUI\nfunc f(v: some View) -> some View { v.contentMargins(for: .container) }", "27.1"),
+    ("presentationPlacement", "import SwiftUI\nfunc f(v: some View) -> some View { v.presentationPlacement(.trailing) }", "27.0"),
+    ("defaultTabBarPlacement", "import SwiftUI\nfunc f(v: some View) -> some View { v.defaultTabBarPlacement(.sidebar) }", "27.0"),
+    ("UITabBarControllerSidebar.preferredPlacement", "import UIKit\n@MainActor func f(t: UITabBarController) { t.sidebar.preferredPlacement = .sidebar }", "27.0"),
+    ("UISheetPresentationController.preferredPlacement", "import UIKit\n@MainActor func f(s: UISheetPresentationController) { s.preferredPlacement = .trailing }", "27.0"),
+    ("dynamicAspectRatio", "import AVFoundation\nfunc f(d: AVCaptureDevice) -> AVCaptureDevice.AspectRatio? { d.dynamicAspectRatio }", "26.0"),
+    ("isCameraSensorOrientationCompensationEnabled", "import AVFoundation\nfunc f(o: AVCapturePhotoOutput) { o.isCameraSensorOrientationCompensationEnabled = false }", "26.0"),
 ]
 
 
@@ -231,10 +218,7 @@ def previous(version):
 
 def check_gates():
     s = "gates"
-    for name, src, version, needs in GATED:
-        if needs and not OPTIONAL.get(needs, True):
-            skip(s, f"{name} requires iOS {version}", f"this SDK does not declare {needs}")
-            continue
+    for name, src, version in GATED:
         below = previous(version)
         rc, diags, err = compile_ios(src + "\n", target=below, sil=False)
         ok = rc != 0 and any(f"only available in iOS {version} or newer" in m for _, m in diags)

@@ -1,6 +1,6 @@
 # Displays, scenes, camera, testing
 
-"Measured" means observed in the iOS 27.1 iPhone Duo simulator (Xcode 27.1 beta).
+"Measured" means observed in the iOS 27.1 iPhone Duo simulator.
 
 ## Apps by linked SDK
 
@@ -266,11 +266,12 @@ Rechecked: camera discovery returned no devices in the iOS 27.1 simulator. Physi
 
 ## Testing on the simulator
 
-- **Runtime.** iPhone Duo needs the iOS 27.1 simulator runtime from Xcode 27.1, and that runtime runs no other iPhone. The iOS 27.2 runtime in Xcode 27.2 beta 2 runs other iPhones but not iPhone Duo. Use one of those as a non-foldable baseline, building the app with the iOS 27.2 SDK minus the two missing APIs.
+- **Runtime.** iPhone Duo runs only on Duo-only simulator runtimes, which `xcrun simctl list runtimes -j` shows with iPhone Duo as their only device type: iOS 27.1 (`iOS-27-1`) and iOS 27.2 (`iOS-27-2-iPhone19-4`). For a non-foldable baseline, use another iPhone on a general runtime.
 - **Boot state.** The simulator boots closed. Its displays are `--display=1` (outer, 466×678 pt) and `--display=3` (inner, 951×669 pt).
 
 ```bash
-UDID=$(xcrun simctl create "Duo test" com.apple.CoreSimulator.SimDeviceType.iPhone-Duo com.apple.CoreSimulator.SimRuntime.iOS-27-1)
+RUNTIME=com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4   # or ...SimRuntime.iOS-27-1
+UDID=$(xcrun simctl create "Duo test" com.apple.CoreSimulator.SimDeviceType.iPhone-Duo "$RUNTIME")
 xcrun simctl boot "$UDID"
 mobilecli agent install --device "$UDID"         # once per simulator
 mobilecli device fold open --device "$UDID"      # folded | half-open | open | 0-180
@@ -284,7 +285,7 @@ Limits found:
 - **Rotation.** Device rotation commands (`mobilecli device orientation set`, Xcode's device interaction `orientation`) don't reach apps on the iPhone Duo simulator.
   - For the outer display in landscape, make the app restrict `supportedInterfaceOrientations` and call `requestGeometryUpdate` from a debug launch argument.
   - The inner display stays landscape, so the open-portrait pose (with its horizontal bars) can't be tested.
-- **Not available:** split view by dragging the home indicator; cameras; StandBy; most app extensions; accessibility tools reading the screen in Device Hub.
+- **Not available:** split view by dragging the home indicator; cameras; StandBy on the iOS 27.1 runtime ([Xcode 27.2](https://developer.apple.com/documentation/xcode-release-notes/xcode-27_2-release-notes) adds it; not rechecked); most app extensions; accessibility tools reading the screen in Device Hub.
 - **Screenshot timing.** Screenshots can be black for a few minutes after boot.
 - **Previews.** Xcode 27.1's canvas overrides have a Display group for previewing on the alternative display.
 

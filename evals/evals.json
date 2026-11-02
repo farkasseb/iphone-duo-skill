@@ -118,13 +118,13 @@
     {
       "id": 9,
       "name": "which-xcode-for-duo",
-      "prompt": "Our team already moved to the Xcode 27.2 beta to test iOS 27.2. We need to ship iPhone Duo support for the launch. Can we build and test the Duo features with Xcode 27.2 beta 2?",
-      "expected_output": "Use Xcode 27.1 (iOS 27.1 SDK) for Duo: Apple's 27.2 beta 2 notes say so, its SDK lacks AVCaptureDeviceDirectionCoordinator and ContentMarginGuide, and its simulator can't run iPhone Duo",
+      "prompt": "Our team already moved to Xcode 27.2 to test iOS 27.2. We need to ship iPhone Duo support for the launch. Can we build and test the Duo features with Xcode 27.2?",
+      "expected_output": "Yes: the iOS 27.2 SDK meets the 27.1-or-later baseline; simulate on a Duo-only runtime, not the general iOS 27.2 one, and keep the Duo APIs behind #available(iOS 27.1, *)",
       "files": [],
       "expectations": [
-        "Recommends Xcode 27.1 with the iOS 27.1 SDK for iPhone Duo work",
-        "Says the Xcode 27.2 beta 2 iOS SDK is missing some Duo APIs, naming at least one of `AVCaptureDeviceDirectionCoordinator` or `ContentMarginGuide`",
-        "Says the iPhone Duo simulator needs the iOS 27.1 runtime (27.2 beta 2's runtime can't run it)",
+        "Says Xcode 27.2 can build the Duo features (its iOS 27.2 SDK meets the 27.1-or-later baseline)",
+        "Says iPhone Duo needs a Duo-only simulator runtime, not the general iOS 27.2 runtime",
+        "Keeps the Duo APIs behind `#available(iOS 27.1, *)` or an equivalent annotation",
         "Mentions that iPhone Duo ships running iOS 27.1"
       ]
     },
